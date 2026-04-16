@@ -30,7 +30,6 @@ module control_unit (
             7'b1100011: begin // Branch (beq)
                 branch = 1'b1; alu_op = 2'b01;
             end
-            // Bổ sung các opcode khác nếu cần thiết cho bài tập lớn
         endcase
     end
 endmodule
