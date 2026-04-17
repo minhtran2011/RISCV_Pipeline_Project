@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module riscv_top (
     input wire clk,
     input wire rst,
@@ -16,19 +18,21 @@ module riscv_top (
     output wire [31:0] state_idex_rs2_data,
     output wire [31:0] state_idex_imm,
     output wire [4:0]  state_idex_rd,
-    output wire [1:0]  state_idex_alu_op, 	 //ALUSel
-    output wire        state_idex_reg_write,  //RegWEn
-    output wire        state_idex_mem_to_reg, //WBSel
+    output wire [1:0]  state_idex_alu_op,     // ALUSel
+    output wire        state_idex_reg_write,  // RegWEn
+    output wire        state_idex_mem_to_reg, // WBSel
 
     // Tầng 3 (EX/MEM): Trạng thái sau khi tính toán ALU
+    output wire [31:0] state_exmem_pc,        
     output wire [31:0] state_exmem_alu_result,
     output wire [31:0] state_exmem_rs2_data,
     output wire [4:0]  state_exmem_rd,
-    output wire        state_exmem_zero,		 //BrEq
+    output wire        state_exmem_zero,      // BrEq
     output wire        state_exmem_reg_write,
-    output wire        state_exmem_mem_write, //MemRW
+    output wire        state_exmem_mem_write, // MemRW
 
     // Tầng 4 (MEM/WB): Trạng thái sau khi truy cập RAM
+    output wire [31:0] state_memwb_pc,       
     output wire [31:0] state_memwb_alu_result,
     output wire [31:0] state_memwb_read_data,
     output wire [4:0]  state_memwb_rd,
@@ -65,11 +69,13 @@ module riscv_top (
     wire [31:0] alu_result_mem, rs2_data_mem, branch_target_mem, read_data_mem;
     wire [4:0]  rd_mem;
     wire        mem_reg_write, mem_mem_to_reg, mem_mem_read, mem_mem_write, mem_branch, zero_flag_mem;
+    wire [31:0] pc_mem;                     
 
     // WB Wires
     wire [31:0] alu_result_wb, read_data_wb, write_data_wb;
     wire [4:0]  rd_wb;
     wire        wb_reg_write, wb_mem_to_reg;
+    wire [31:0] pc_wb;                      
 
 
     // =========================================================
@@ -154,11 +160,13 @@ module riscv_top (
         .mem_write_in(ex_mem_write), .branch_in(ex_branch),
         .branch_target_in(branch_target_ex), .alu_result_in(alu_result_ex), .rs2_data_in(rs2_data_ex),
         .zero_flag_in(zero_flag_ex), .rd_addr_in(instr_ex[11:7]),
-
+        .pc_in(pc_ex),                          
+        
         .reg_write_out(mem_reg_write), .mem_to_reg_out(mem_mem_to_reg), .mem_read_out(mem_mem_read), 
         .mem_write_out(mem_mem_write), .branch_out(mem_branch),
         .branch_target_out(branch_target_mem), .alu_result_out(alu_result_mem), .rs2_data_out(rs2_data_mem),
-        .zero_flag_out(zero_flag_mem), .rd_addr_out(rd_mem)
+        .zero_flag_out(zero_flag_mem), .rd_addr_out(rd_mem),
+        .pc_out(pc_mem)                         
     );
 
     // =========================================================
@@ -175,9 +183,11 @@ module riscv_top (
         .clk(clk), .rst(rst),
         .reg_write_in(mem_reg_write), .mem_to_reg_in(mem_mem_to_reg),
         .read_data_in(read_data_mem), .alu_result_in(alu_result_mem), .rd_addr_in(rd_mem),
-
+        .pc_in(pc_mem),                         
+        
         .reg_write_out(wb_reg_write), .mem_to_reg_out(wb_mem_to_reg),
-        .read_data_out(read_data_wb), .alu_result_out(alu_result_wb), .rd_addr_out(rd_wb)
+        .read_data_out(read_data_wb), .alu_result_out(alu_result_wb), .rd_addr_out(rd_wb),
+        .pc_out(pc_wb)                          
     );
 
     // =========================================================
@@ -190,11 +200,11 @@ module riscv_top (
     // GÁN DÂY NỘI BỘ RA CÁC CỔNG OUTPUT
     // =========================================================
     
-    // Trạng thái reg 1
+    // Trạng thái IF/ID
     assign state_ifid_pc          = pc_id;
     assign state_ifid_instr       = instr_id;
 
-    // Trạng thái reg 2
+    // Trạng thái ID/EX
     assign state_idex_pc          = pc_ex;
     assign state_idex_rs1_data    = rs1_data_ex;
     assign state_idex_rs2_data    = rs2_data_ex;
@@ -204,7 +214,8 @@ module riscv_top (
     assign state_idex_reg_write   = ex_reg_write;
     assign state_idex_mem_to_reg  = ex_mem_to_reg;
 
-    // Trạng thái reg 3
+    // Trạng thái EX/MEM
+    assign state_exmem_pc         = pc_mem;               
     assign state_exmem_alu_result = alu_result_mem;
     assign state_exmem_rs2_data   = rs2_data_mem;
     assign state_exmem_rd         = rd_mem;
@@ -212,14 +223,15 @@ module riscv_top (
     assign state_exmem_reg_write  = mem_reg_write;
     assign state_exmem_mem_write  = mem_mem_write;
 
-    // Trạng thái reg 4
+    // Trạng thái MEM/WB
+    assign state_memwb_pc         = pc_wb;               
     assign state_memwb_alu_result = alu_result_wb;
     assign state_memwb_read_data  = read_data_wb;
     assign state_memwb_rd         = rd_wb;
     assign state_memwb_reg_write  = wb_reg_write;
     assign state_memwb_mem_to_reg = wb_mem_to_reg;
 
-    // Trạng thái cuối
+    // Trạng thái cuối cùng (Write Back)
     assign state_final_write_data = write_data_wb;
 
 endmodule

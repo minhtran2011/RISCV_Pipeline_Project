@@ -22,6 +22,7 @@ module tb_riscv_top();
     wire        state_idex_mem_to_reg;
 
     // Tầng EX/MEM
+    wire [31:0] state_exmem_pc;           
     wire [31:0] state_exmem_alu_result;
     wire [31:0] state_exmem_rs2_data;
     wire [4:0]  state_exmem_rd;
@@ -30,6 +31,7 @@ module tb_riscv_top();
     wire        state_exmem_mem_write;
 
     // Tầng MEM/WB
+    wire [31:0] state_memwb_pc;           
     wire [31:0] state_memwb_alu_result;
     wire [31:0] state_memwb_read_data;
     wire [4:0]  state_memwb_rd;
@@ -43,9 +45,12 @@ module tb_riscv_top();
     riscv_top uut (
         .clk(clk),
         .rst(rst),
+        
+        // Outputs từ IF/ID
         .state_ifid_pc(state_ifid_pc),
         .state_ifid_instr(state_ifid_instr),
         
+        // Outputs từ ID/EX
         .state_idex_pc(state_idex_pc),
         .state_idex_rs1_data(state_idex_rs1_data),
         .state_idex_rs2_data(state_idex_rs2_data),
@@ -55,6 +60,8 @@ module tb_riscv_top();
         .state_idex_reg_write(state_idex_reg_write),
         .state_idex_mem_to_reg(state_idex_mem_to_reg),
         
+        // Outputs từ EX/MEM
+        .state_exmem_pc(state_exmem_pc),           // === ĐÃ THÊM ===
         .state_exmem_alu_result(state_exmem_alu_result),
         .state_exmem_rs2_data(state_exmem_rs2_data),
         .state_exmem_rd(state_exmem_rd),
@@ -62,12 +69,15 @@ module tb_riscv_top();
         .state_exmem_reg_write(state_exmem_reg_write),
         .state_exmem_mem_write(state_exmem_mem_write),
         
+        // Outputs từ MEM/WB
+        .state_memwb_pc(state_memwb_pc),           // === ĐÃ THÊM ===
         .state_memwb_alu_result(state_memwb_alu_result),
         .state_memwb_read_data(state_memwb_read_data),
         .state_memwb_rd(state_memwb_rd),
         .state_memwb_reg_write(state_memwb_reg_write),
         .state_memwb_mem_to_reg(state_memwb_mem_to_reg),
         
+        // Final write back data
         .state_final_write_data(state_final_write_data)
     );
 
@@ -80,16 +90,17 @@ module tb_riscv_top();
     // 5. Kịch bản chạy mô phỏng
     initial begin
         // Dọn dẹp hệ thống
-        rst = 1; #25; rst = 0;
+        rst = 1; 
+        #25; 
+        rst = 0;
         
         // =======================================================
         // UNIT TEST 1: Kiểm tra lệnh ADDI (x1 = 10)
         // =======================================================
-        // Đợi đến khi có tín hiệu ghi vào thanh ghi x1 ở tầng cuối
         wait (state_memwb_rd == 5'd1 && state_memwb_reg_write == 1'b1);
         #1; // Đợi 1ns cho tín hiệu ổn định
         if (state_final_write_data == 32'd10)
-            $display("[PASS] Unit Test 1 - ADDI x1: Thang cong! Gia tri = %0d", state_final_write_data);
+            $display("[PASS] Unit Test 1 - ADDI x1: Thanh cong! Gia tri = %0d", state_final_write_data);
         else
             $display("[FAIL] Unit Test 1 - ADDI x1: LOI! Mong doi 10, nhung nhan duoc = %0d", state_final_write_data);
 
@@ -99,7 +110,7 @@ module tb_riscv_top();
         wait (state_memwb_rd == 5'd3 && state_memwb_reg_write == 1'b1);
         #1;
         if (state_final_write_data == 32'd30)
-            $display("[PASS] Unit Test 2 - ADD x3: Thang cong! Gia tri = %0d", state_final_write_data);
+            $display("[PASS] Unit Test 2 - ADD x3: Thanh cong! Gia tri = %0d", state_final_write_data);
         else
             $display("[FAIL] Unit Test 2 - ADD x3: LOI! Mong doi 30, nhung nhan duoc = %0d", state_final_write_data);
 
@@ -109,7 +120,7 @@ module tb_riscv_top();
         wait (state_memwb_rd == 5'd5 && state_memwb_reg_write == 1'b1);
         #1;
         if (state_final_write_data == 32'd60)
-            $display("[PASS] Unit Test 3 - BEQ Branching: Thang cong! PC da nhay dung.");
+            $display("[PASS] Unit Test 3 - BEQ Branching: Thanh cong! PC da nhay dung.");
         else
             $display("[FAIL] Unit Test 3 - BEQ Branching: LOI! Chua nhay qua lenh 50.");
 
